@@ -208,11 +208,12 @@ export function conversationAreaCreateHandler(
 
   const result = townController?.addConversationArea(_requestData.conversationArea);
   return {
-    isOK: !!result,
+    isOK: !!(result && session),
     response: {},
-    message: result
-      ? undefined
-      : `Unable to create conversation area ${_requestData.conversationArea.label} with topic ${_requestData.conversationArea.topic}`,
+    message:
+      result && session
+        ? undefined
+        : `Unable to create conversation area ${_requestData.conversationArea.label} with topic ${_requestData.conversationArea.topic}`,
   };
 
   // return {
