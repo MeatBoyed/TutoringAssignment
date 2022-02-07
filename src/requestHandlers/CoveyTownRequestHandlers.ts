@@ -215,12 +215,6 @@ export function conversationAreaCreateHandler(
         ? undefined
         : `Unable to create conversation area ${_requestData.conversationArea.label} with topic ${_requestData.conversationArea.topic}`,
   };
-
-  // return {
-  //   isOK: false,
-  //   response: {},
-  //   message: `Unable to create conversation area ${_requestData.conversationArea.label} with topic ${_requestData.conversationArea.topic}`,
-  // };
 }
 /**
  * An adapter between CoveyTownController's event interface (CoveyTownListener)
