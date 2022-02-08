@@ -34,6 +34,8 @@ export interface TownJoinResponse {
   providerVideoToken: string;
   /** List of players currently in this town * */
   currentPlayers: Player[];
+  /** List of ConversationAreas currently in this town * */
+  conversationAreas: ServerConversationArea[];
   /** Friendly name of this town * */
   friendlyName: string;
   /** Is this a private town? * */
@@ -122,6 +124,7 @@ export async function townJoinHandler(
       coveySessionToken: newSession.sessionToken,
       providerVideoToken: newSession.videoToken,
       currentPlayers: coveyTownController.players,
+      conversationAreas: coveyTownController.conversationAreas,
       friendlyName: coveyTownController.friendlyName,
       isPubliclyListed: coveyTownController.isPubliclyListed,
     },
