@@ -1,10 +1,9 @@
 import { customAlphabet, nanoid } from 'nanoid';
-import { ConversationAreaCoordinates, ServerConversationArea } from '../client/TownsServiceClient';
+import { BoundingBox, ServerConversationArea } from '../client/TownsServiceClient';
 import { UserLocation } from '../CoveyTypes';
 import CoveyTownListener from '../types/CoveyTownListener';
 import Player from '../types/Player';
 import PlayerSession from '../types/PlayerSession';
-import { getConversationAreaCoordinates, getConversationAreaCoordinate } from '../Utils';
 import IVideoClient from './IVideoClient';
 import TwilioVideo from './TwilioVideo';
 
@@ -142,14 +141,43 @@ export default class CoveyTownController {
    * Check if the desired ConversationArea's BoundingBox overlaps with any existing
    * ConversationArea's BoundingBox.
    *
+   * @param boudingBox BouningBox to calculate the Coordinates
+   *
+   * @returns all four Coordinates of the BoudingBox
+   */
+  getConversationAreaCoordinates = (boudingBox: BoundingBox): number[] => {
+    const heightDiff = boudingBox.height / 2;
+    const widthDiff = boudingBox.width / 2;
+
+    const xBotLeft = boudingBox.x - widthDiff;
+    const yBotLeft = boudingBox.y - heightDiff;
+
+    const xTopRight = boudingBox.x + widthDiff;
+    const yTopRight = boudingBox.y + heightDiff;
+
+    const xTopLeft = boudingBox.x - widthDiff;
+    const yTopLeft = boudingBox.y + heightDiff;
+
+    const xBotRight = boudingBox.x + widthDiff;
+    const yBotRight = boudingBox.y - heightDiff;
+
+    return [xBotLeft, yBotLeft, xTopRight, yTopRight, xTopLeft, yTopLeft, xBotRight, yBotRight];
+  };
+
+  /**
+   * Check if the desired ConversationArea's BoundingBox overlaps with any existing
+   * ConversationArea's BoundingBox.
+   *
    * @param mainCoordinates Coordinates of the Bottem Left & Top Right points of the desired ConversationArea to be added
    *
-   * @returns Returns True if BoundingBoxes overlap, false if none is found
+   * @returns Returns True if any BoundingBoxes overlap, false none overlap
    */
   conversationOverlaps(mainCoordinates: number[]): boolean {
     let conversationsOverlap = false;
     for (let i = 0; i < this._conversationAreas.length; i += 1) {
-      const newCoordinates = getConversationAreaCoordinates(this._conversationAreas[i].boundingBox);
+      const newCoordinates = this.getConversationAreaCoordinates(
+        this._conversationAreas[i].boundingBox,
+      );
 
       if (
         !(
@@ -173,25 +201,23 @@ export default class CoveyTownController {
    */
   addPlayerToConversationArea(
     conversationArea: ServerConversationArea,
-    conversationAreaCoordinates: ConversationAreaCoordinates,
+    conversationAreaCoordinates: number[],
   ): void {
-    this._players.map(player => {
+    this._players.forEach(player => {
       const xSatisfies = !!(
-        player.location.x > conversationAreaCoordinates.leftPoint.x &&
-        player.location.x < conversationAreaCoordinates.rightPoint.x
+        player.location.x > conversationAreaCoordinates[4] &&
+        player.location.x < conversationAreaCoordinates[7]
       );
 
       const ySatisfies = !!(
-        player.location.y > conversationAreaCoordinates.leftPoint.y &&
-        player.location.y > conversationAreaCoordinates.rightPoint.y
+        player.location.y > conversationAreaCoordinates[5] &&
+        player.location.y > conversationAreaCoordinates[7]
       );
 
       if (xSatisfies && ySatisfies) {
         conversationArea.occupantsByID.push(player.id);
         player.setActiveConversationArea(conversationArea);
       }
-
-      return true;
     });
   }
 
@@ -219,18 +245,16 @@ export default class CoveyTownController {
         break;
       }
     }
-
     if (conversationAreaLabelExists) return false;
 
     // Check the BoundingBox is valid
-    const conversationAreaCoordinates = getConversationAreaCoordinates(
+    const conversationAreaCoordinates = this.getConversationAreaCoordinates(
       _conversationArea.boundingBox,
     );
     if (this.conversationOverlaps(conversationAreaCoordinates)) return false;
 
     // Add players to the ConversationArea
-    const conversationAreaCoordinate = getConversationAreaCoordinate(_conversationArea.boundingBox);
-    this.addPlayerToConversationArea(_conversationArea, conversationAreaCoordinate);
+    this.addPlayerToConversationArea(_conversationArea, conversationAreaCoordinates);
 
     // // Invoke another function
     this._listeners.map(coveyTown => coveyTown.onConversationAreaUpdated(_conversationArea));
@@ -238,8 +262,7 @@ export default class CoveyTownController {
     // Add Converstation Area to list of Conversation Areas
     this._conversationAreas.push(_conversationArea);
 
-    return this._capacity > 0 && _conversationArea.label !== ''; // TODO delete this when you implement HW2, it is here just to satisfy the linter
-    // return true;
+    return true;
   }
 
   /**

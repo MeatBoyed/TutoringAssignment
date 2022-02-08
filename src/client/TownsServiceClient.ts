@@ -8,14 +8,6 @@ export type ServerPlayer = { _id: string; _userName: string; location: UserLocat
  * A bounding box, with a coordinate system that matches the frontend game engine's coordinates
  * The x,y position specifies the center of the box (NOT a corner).
  */
-export type Coordinate = {
-  x: number;
-  y: number;
-};
-export type ConversationAreaCoordinates = {
-  leftPoint: Coordinate;
-  rightPoint: Coordinate;
-};
 export type BoundingBox = {
   x: number;
   y: number;
