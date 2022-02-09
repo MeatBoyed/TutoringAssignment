@@ -1,5 +1,3 @@
-import { BoundingBox } from './client/TownsServiceClient';
-
 /**
  * This function exists solely to help satisfy the linter + typechecker when it looks over the
  * stubbed (not yet implemented by you) functions. Remove calls to it as you go.
