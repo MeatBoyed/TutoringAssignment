@@ -210,6 +210,7 @@ export function conversationAreaCreateHandler(
   const session = townController?.getSessionByToken(_requestData.sessionToken);
 
   const result = townController?.addConversationArea(_requestData.conversationArea);
+
   return {
     isOK: !!(result && session),
     response: {},

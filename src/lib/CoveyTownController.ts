@@ -119,6 +119,23 @@ export default class CoveyTownController {
   destroySession(session: PlayerSession): void {
     this._players = this._players.filter(p => p.id !== session.player.id);
     this._sessions = this._sessions.filter(s => s.sessionToken !== session.sessionToken);
+
+    this._conversationAreas.forEach((conversationArea, convoIndex) => {
+      if (conversationArea.label === session.player.location.conversationLabel) {
+        const index = conversationArea.occupantsByID.indexOf(session.player.id);
+        conversationArea.occupantsByID.splice(index, 1);
+
+        this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
+
+        if (conversationArea.occupantsByID.length === 0) {
+          this._conversationAreas.slice(convoIndex, 1);
+          this._listeners.forEach(listener =>
+            listener.onConversationAreaDestroyed(conversationArea),
+          );
+        }
+      }
+    });
+
     this._listeners.forEach(listener => listener.onPlayerDisconnected(session.player));
   }
 
@@ -133,6 +150,28 @@ export default class CoveyTownController {
    * @param location New location for this player
    */
   updatePlayerLocation(player: Player, location: UserLocation): void {
+    if (player.location.conversationLabel !== location.conversationLabel) {
+      this._conversationAreas.forEach(conversationArea => {
+        // Remove Player's ID from previous ConversationArea
+        if (conversationArea.label === player.location.conversationLabel) {
+          const index = conversationArea.occupantsByID.indexOf(player.id);
+          conversationArea.occupantsByID.splice(index, 1);
+          player.setActiveConversationArea(undefined);
+
+          this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
+        }
+      });
+
+      this._conversationAreas.forEach(conversationArea => {
+        // Add Player's ID to the new ConversationArea
+        if (conversationArea.label === location.conversationLabel) {
+          conversationArea.occupantsByID.push(player.id);
+          player.setActiveConversationArea(conversationArea);
+          this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
+        }
+      });
+    }
+
     player.updateLocation(location);
     this._listeners.forEach(listener => listener.onPlayerMoved(player));
   }
@@ -195,31 +234,25 @@ export default class CoveyTownController {
   }
 
   /**
-   * Add's any player that is within the desired ConversationArea's BoundingBox
+   * Check if the player's location is within a ConversationArea's BoundingBox
    *
+   * @param player
    * @param conversationAreaCoordinates
+   *
+   * @return True if the Player is in the BoundingBox, false if not
    */
-  addPlayerToConversationArea(
-    conversationArea: ServerConversationArea,
-    conversationAreaCoordinates: number[],
-  ): void {
-    this._players.forEach(player => {
-      const xSatisfies = !!(
-        player.location.x > conversationAreaCoordinates[4] &&
-        player.location.x < conversationAreaCoordinates[7]
-      );
+  isPlayerInConversationArea = (player: Player, conversationAreaCoordinates: number[]): boolean => {
+    if (
+      player.location.x > conversationAreaCoordinates[4] &&
+      player.location.x < conversationAreaCoordinates[7] &&
+      player.location.y < conversationAreaCoordinates[5] &&
+      player.location.y > conversationAreaCoordinates[7]
+    ) {
+      return true;
+    }
 
-      const ySatisfies = !!(
-        player.location.y > conversationAreaCoordinates[5] &&
-        player.location.y > conversationAreaCoordinates[7]
-      );
-
-      if (xSatisfies && ySatisfies) {
-        conversationArea.occupantsByID.push(player.id);
-        player.setActiveConversationArea(conversationArea);
-      }
-    });
-  }
+    return false;
+  };
 
   /**
    * Creates a new conversation area in this town if there is not currently an active
@@ -238,6 +271,7 @@ export default class CoveyTownController {
     // Check Topic is a valid string
     if (_conversationArea.topic === '') return false;
 
+    // eslint-disable-next-line no-console
     let conversationAreaLabelExists = false;
     for (let i = 0; i < this._conversationAreas.length; i += 1) {
       if (this.conversationAreas[i].label === _conversationArea.label) {
@@ -254,8 +288,16 @@ export default class CoveyTownController {
     if (this.conversationOverlaps(conversationAreaCoordinates)) return false;
 
     // Add players to the ConversationArea
-    this.addPlayerToConversationArea(_conversationArea, conversationAreaCoordinates);
-
+    this._players.forEach(player => {
+      const playerInConvoArea = this.isPlayerInConversationArea(
+        player,
+        conversationAreaCoordinates,
+      );
+      if (playerInConvoArea) {
+        _conversationArea.occupantsByID.push(player.id);
+        player.setActiveConversationArea(_conversationArea);
+      }
+    });
     // // Invoke another function
     this._listeners.map(coveyTown => coveyTown.onConversationAreaUpdated(_conversationArea));
 

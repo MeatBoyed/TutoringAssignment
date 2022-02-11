@@ -49,7 +49,7 @@ export default class Player {
     this.location = location;
   }
 
-  setActiveConversationArea(conversationArea: ServerConversationArea): void {
+  setActiveConversationArea(conversationArea: ServerConversationArea | undefined): void {
     this._activeConversationArea = conversationArea;
   }
 }
