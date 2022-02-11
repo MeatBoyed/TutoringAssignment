@@ -117,25 +117,27 @@ export default class CoveyTownController {
    * @param session PlayerSession to destroy
    */
   destroySession(session: PlayerSession): void {
-    this._players = this._players.filter(p => p.id !== session.player.id);
-    this._sessions = this._sessions.filter(s => s.sessionToken !== session.sessionToken);
-
-    this._conversationAreas.forEach((conversationArea, convoIndex) => {
+    this._conversationAreas.forEach(conversationArea => {
       if (conversationArea.label === session.player.location.conversationLabel) {
         const index = conversationArea.occupantsByID.indexOf(session.player.id);
         conversationArea.occupantsByID.splice(index, 1);
 
-        this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
-
+        // Check if the last player was removed and remove the ConversationArea
         if (conversationArea.occupantsByID.length === 0) {
-          this._conversationAreas.slice(convoIndex, 1);
+          const convoIndex = this._conversationAreas.indexOf(conversationArea);
+          this._conversationAreas.splice(convoIndex, 1);
+
           this._listeners.forEach(listener =>
             listener.onConversationAreaDestroyed(conversationArea),
           );
+        } else {
+          this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
         }
       }
     });
 
+    this._players = this._players.filter(p => p.id !== session.player.id);
+    this._sessions = this._sessions.filter(s => s.sessionToken !== session.sessionToken);
     this._listeners.forEach(listener => listener.onPlayerDisconnected(session.player));
   }
 
@@ -158,7 +160,19 @@ export default class CoveyTownController {
           conversationArea.occupantsByID.splice(index, 1);
           player.setActiveConversationArea(undefined);
 
-          this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
+          // Check if the last player was removed and delete the ConversationArea
+          if (conversationArea.occupantsByID.length === 0) {
+            const convoIndex = this._conversationAreas.indexOf(conversationArea);
+            this._conversationAreas.splice(convoIndex, 1);
+
+            this._listeners.forEach(listener =>
+              listener.onConversationAreaDestroyed(conversationArea),
+            );
+          } else {
+            this._listeners.forEach(listener =>
+              listener.onConversationAreaUpdated(conversationArea),
+            );
+          }
         }
       });
 
@@ -170,9 +184,11 @@ export default class CoveyTownController {
           this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
         }
       });
+      player.updateLocation(location);
+    } else {
+      player.updateLocation(location);
     }
 
-    player.updateLocation(location);
     this._listeners.forEach(listener => listener.onPlayerMoved(player));
   }
 
