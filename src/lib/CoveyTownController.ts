@@ -152,43 +152,44 @@ export default class CoveyTownController {
    * @param location New location for this player
    */
   updatePlayerLocation(player: Player, location: UserLocation): void {
-    if (player.location.conversationLabel !== location.conversationLabel) {
-      this._conversationAreas.forEach(conversationArea => {
-        // Remove Player's ID from previous ConversationArea
-        if (conversationArea.label === player.location.conversationLabel) {
-          const index = conversationArea.occupantsByID.indexOf(player.id);
-          conversationArea.occupantsByID.splice(index, 1);
-          player.setActiveConversationArea(undefined);
+    // Remove Player's ID from previous ConversationArea
+    this._conversationAreas.forEach(conversationArea => {
+      if (conversationArea.label === player.location.conversationLabel) {
+        const index = conversationArea.occupantsByID.indexOf(player.id);
+        conversationArea.occupantsByID.splice(index, 1);
 
-          // Check if the last player was removed and delete the ConversationArea
-          if (conversationArea.occupantsByID.length === 0) {
-            const convoIndex = this._conversationAreas.indexOf(conversationArea);
-            this._conversationAreas.splice(convoIndex, 1);
+        // Check if the last player was removed and delete the ConversationArea
+        if (conversationArea.occupantsByID.length === 0) {
+          const convoIndex = this._conversationAreas.indexOf(conversationArea);
+          this._conversationAreas.splice(convoIndex, 1);
 
-            this._listeners.forEach(listener =>
-              listener.onConversationAreaDestroyed(conversationArea),
-            );
-          } else {
-            this._listeners.forEach(listener =>
-              listener.onConversationAreaUpdated(conversationArea),
-            );
-          }
-        }
-      });
-
-      this._conversationAreas.forEach(conversationArea => {
-        // Add Player's ID to the new ConversationArea
-        if (conversationArea.label === location.conversationLabel) {
-          conversationArea.occupantsByID.push(player.id);
-          player.setActiveConversationArea(conversationArea);
+          this._listeners.forEach(listener =>
+            listener.onConversationAreaDestroyed(conversationArea),
+          );
+        } else {
           this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
         }
-      });
-      player.updateLocation(location);
-    } else {
-      player.updateLocation(location);
+      }
+    });
+
+    let playerWasAdded = false;
+    // Add Player's ID to the new ConversationArea
+    this._conversationAreas.forEach(conversationArea => {
+      if (conversationArea.label === location.conversationLabel) {
+        conversationArea.occupantsByID.push(player.id);
+        player.setActiveConversationArea(conversationArea);
+
+        playerWasAdded = true;
+
+        this._listeners.forEach(listener => listener.onConversationAreaUpdated(conversationArea));
+      }
+    });
+
+    if (!playerWasAdded) {
+      player.setActiveConversationArea(undefined);
     }
 
+    player.updateLocation(location);
     this._listeners.forEach(listener => listener.onPlayerMoved(player));
   }
 
