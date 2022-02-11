@@ -244,7 +244,7 @@ export default class CoveyTownController {
   isPlayerInConversationArea = (player: Player, conversationAreaCoordinates: number[]): boolean => {
     if (
       player.location.x > conversationAreaCoordinates[4] &&
-      player.location.x < conversationAreaCoordinates[7] &&
+      player.location.x < conversationAreaCoordinates[6] &&
       player.location.y < conversationAreaCoordinates[5] &&
       player.location.y > conversationAreaCoordinates[7]
     ) {

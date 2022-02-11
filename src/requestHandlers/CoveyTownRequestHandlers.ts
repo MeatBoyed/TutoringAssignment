@@ -209,15 +209,22 @@ export function conversationAreaCreateHandler(
 
   const session = townController?.getSessionByToken(_requestData.sessionToken);
 
-  const result = townController?.addConversationArea(_requestData.conversationArea);
+  if (session) {
+    const result = townController?.addConversationArea(_requestData.conversationArea);
 
-  return {
-    isOK: !!(result && session),
-    response: {},
-    message:
-      result && session
+    return {
+      isOK: !!result,
+      response: {},
+      message: result
         ? undefined
         : `Unable to create conversation area ${_requestData.conversationArea.label} with topic ${_requestData.conversationArea.topic}`,
+    };
+  }
+
+  return {
+    isOK: false,
+    response: {},
+    message: `Unable to create conversation area ${_requestData.conversationArea.label} with topic ${_requestData.conversationArea.topic}`,
   };
 }
 /**
